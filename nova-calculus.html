@@ -145,6 +145,9 @@ html, body {
   align-items: stretch;
   gap: 10px;
 }
+#input-actions {
+  display: none;
+}
 #answer-field {
   flex: 1;
   background: var(--dark-panel);
@@ -476,6 +479,50 @@ html, body {
   }
 }
 
+@media (orientation: landscape) {
+  #input-area {
+    top: 16px;
+    bottom: auto;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  #hud {
+    justify-content: center;
+    gap: min(16vw, 120px);
+    padding:
+      calc(10px + env(safe-area-inset-top, 0px))
+      max(24px, env(safe-area-inset-right, 0px))
+      8px
+      max(24px, env(safe-area-inset-left, 0px));
+  }
+  #hud-right {
+    align-items: flex-start;
+  }
+  #score-txt,
+  #level-txt,
+  #wave-txt {
+    text-align: left;
+  }
+  body.touch-device #input-area {
+    left: 50%;
+    right: auto;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+    width: min(36vw, 240px);
+    margin-left: -120px;
+    transform: none;
+  }
+  body.touch-device #mobile-controls {
+    left: calc(12px + env(safe-area-inset-left, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  body.touch-device #mobile-keypad {
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
   #start-screen,
   #gameover-screen {
@@ -532,11 +579,11 @@ html, body {
     font-size: 7px;
   }
   body.touch-device #input-area {
-    left: auto;
-    right: calc(8px + env(safe-area-inset-right, 0px));
+    left: 50%;
+    right: auto;
     top: calc(44px + env(safe-area-inset-top, 0px));
-    width: 108px;
-    margin-left: 0;
+    width: 120px;
+    margin-left: -60px;
   }
   #answer-field {
     font-size: 14px;
@@ -593,9 +640,11 @@ html, body {
     line-height: 1.9;
   }
   body.touch-device #input-area {
+    left: 50%;
+    right: auto;
     top: 52px;
-    width: 156px;
-    margin-left: -78px;
+    width: 132px;
+    margin-left: -66px;
   }
   body.touch-device #mobile-controls {
     left: 10px;
@@ -666,10 +715,11 @@ html, body {
     padding: 14px 18px;
   }
   body.touch-device #input-area {
-    right: 8px;
+    left: 50%;
+    right: auto;
     top: 48px;
-    width: 104px;
-    margin-left: 0;
+    width: 120px;
+    margin-left: -60px;
   }
   body.touch-device #mobile-keypad {
     width: 132px;
@@ -692,20 +742,21 @@ html, body {
 
 @media (hover: none) and (pointer: coarse) and (orientation: portrait) and (max-width: 700px) {
   body.touch-device #input-area {
-    left: auto;
-    right: calc(8px + env(safe-area-inset-right, 0px));
+    left: 50%;
+    right: auto;
     top: calc(44px + env(safe-area-inset-top, 0px));
-    width: 108px;
-    margin-left: 0;
+    width: 120px;
+    margin-left: -60px;
   }
 }
 
 @media (hover: none) and (pointer: coarse) and (orientation: portrait) and (max-width: 480px) {
   body.touch-device #input-area {
-    right: calc(8px + env(safe-area-inset-right, 0px));
+    left: 50%;
+    right: auto;
     top: calc(44px + env(safe-area-inset-top, 0px));
-    width: 96px;
-    margin-left: 0;
+    width: 112px;
+    margin-left: -56px;
   }
 }
 </style>
@@ -820,6 +871,11 @@ const keypadButtons = Array.from(document.querySelectorAll('#mobile-keypad [data
 let W = canvas.width = window.innerWidth;
 let H = canvas.height = window.innerHeight;
 let isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+
+function getTouchViewScale() {
+  if (!isTouchDevice) return 1;
+  return H > W ? 0.8 : 0.88;
+}
 
 function applyDeviceMode() {
   isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
@@ -1137,7 +1193,7 @@ class EnemyProj {
     const d = Math.sqrt(dx*dx + dy*dy) || 1;
     const spd = 2.8 + Math.random() * 1.2;
     this.vx = (dx/d) * spd; this.vy = (dy/d) * spd;
-    this.r = 6; this.dead = false;
+    this.r = 6 * getTouchViewScale(); this.dead = false;
   }
   update(dt) {
     const f = dt * 0.06;
@@ -1174,10 +1230,11 @@ const ECOLS  = ['#ff2d78','#a855f7','#ff6b35','#00d4aa','#ff9f00'];
 
 class Enemy {
   constructor(x, y, level) {
+    const viewScale = getTouchViewScale();
     this.id    = eidCtr++;
     this.x     = x; this.y = y;
     this.isBoss = (Math.random() < 0.1 && level >= 2);
-    this.r     = this.isBoss ? 40 : (22 + Math.random() * 12);
+    this.r     = (this.isBoss ? 40 : (22 + Math.random() * 12)) * viewScale;
     this.hp    = this.isBoss ? 4 : 1;
     this.maxHp = this.hp;
     this.spd   = (0.8 + Math.random() * 0.6) * (this.isBoss ? 0.65 : 1);
@@ -1370,7 +1427,7 @@ class Projectile {
     this.x = x; this.y = y;
     this.target = target;
     this.spd = 7.5;
-    this.r = 5;
+    this.r = 5 * getTouchViewScale();
     this.dead = false;
     this.trail = [];
   }
@@ -1422,8 +1479,9 @@ let player;
 
 class Player {
   constructor() {
+    const viewScale = getTouchViewScale();
     this.x = W / 2; this.y = H / 2;
-    this.r = 20;
+    this.r = 20 * viewScale;
     this.spd = 2.9;
     this.hp = 10; this.maxHp = 10;
     this.level = 1;
@@ -1850,7 +1908,7 @@ function getSpawnPressure() {
 
 function spawnEnemy() {
   const side = Math.floor(Math.random() * 4);
-  const pad = 60;
+  const pad = isTouchDevice ? (H > W ? 92 : 78) : 60;
   let x, y;
   if (side === 0)      { x = Math.random() * W;   y = -pad; }
   else if (side === 1) { x = W + pad;              y = Math.random() * H; }
