@@ -60,6 +60,9 @@ html, body {
   pointer-events: none;
   z-index: 50;
 }
+body.touch-device #ui-overlay {
+  pointer-events: auto;
+}
 
 /* ===== HUD ===== */
 #hud {
@@ -128,9 +131,11 @@ html, body {
   bottom: 36px;
   left: 50%;
   transform: translateX(-50%);
-  align-items: center;
+  width: min(92vw, 520px);
+  align-items: stretch;
   flex-direction: column;
   gap: 6px;
+  pointer-events: all;
 }
 #input-hint {
   font-size: 6px;
@@ -139,25 +144,117 @@ html, body {
   letter-spacing: 1px;
   text-align: center;
 }
-#input-box {
+#answer-controls,
+#input-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+#answer-field {
+  flex: 1;
   background: var(--dark-panel);
   border: 2px solid var(--cyan);
   border-radius: 4px;
-  padding: 9px 22px;
+  padding: 12px 16px;
   font-family: 'Press Start 2P', monospace;
   font-size: 16px;
   color: var(--cyan);
   text-shadow: 0 0 12px var(--cyan);
   box-shadow: 0 0 24px var(--cyan-dim), inset 0 0 10px rgba(0,245,255,0.05);
-  letter-spacing: 6px;
-  min-width: 140px;
+  letter-spacing: 4px;
+  min-width: 0;
   text-align: center;
+  outline: none;
+  caret-color: var(--cyan);
+  -webkit-appearance: none;
+  appearance: none;
 }
-#input-box.wrong {
+#answer-field::placeholder {
+  color: rgba(208,216,255,0.35);
+}
+#answer-field.wrong {
   border-color: var(--pink);
   color: var(--pink);
   text-shadow: 0 0 12px var(--pink);
   box-shadow: 0 0 24px var(--pink-dim);
+}
+.input-btn {
+  background: var(--dark-panel);
+  border: 2px solid var(--cyan);
+  color: var(--cyan);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  min-width: 88px;
+  padding: 0 14px;
+  border-radius: 4px;
+  text-shadow: 0 0 10px var(--cyan);
+  box-shadow: 0 0 14px var(--cyan-dim);
+  pointer-events: all;
+  -webkit-tap-highlight-color: transparent;
+}
+.input-btn:active {
+  transform: scale(0.97);
+}
+.input-btn-small {
+  min-width: 0;
+  flex: 1;
+  min-height: 42px;
+}
+
+/* ===== TOUCH CONTROLS ===== */
+#mobile-controls {
+  display: none;
+  position: absolute;
+  left: 18px;
+  bottom: 24px;
+  pointer-events: none;
+}
+#move-pad {
+  position: relative;
+  width: 122px;
+  height: 122px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,245,255,0.4);
+  background:
+    radial-gradient(circle at center, rgba(0,245,255,0.13) 0%, rgba(0,245,255,0.06) 45%, rgba(5,5,20,0.7) 70%),
+    rgba(5,5,20,0.75);
+  box-shadow: 0 0 24px rgba(0,245,255,0.18), inset 0 0 18px rgba(0,245,255,0.08);
+  pointer-events: all;
+  touch-action: none;
+}
+#move-pad::before,
+#move-pad::after {
+  content: '';
+  position: absolute;
+  background: rgba(0,245,255,0.16);
+}
+#move-pad::before {
+  top: 50%;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  transform: translateY(-50%);
+}
+#move-pad::after {
+  left: 50%;
+  top: 16px;
+  bottom: 16px;
+  width: 1px;
+  transform: translateX(-50%);
+}
+#move-stick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,245,255,0.65);
+  background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.95), rgba(0,245,255,0.7));
+  box-shadow: 0 0 18px rgba(0,245,255,0.35);
+  transform: translate(-50%, -50%);
+  transition: transform 0.06s ease-out;
 }
 
 /* ===== SCREENS ===== */
@@ -277,6 +374,122 @@ html, body {
   text-shadow: 0 0 8px var(--purple);
   letter-spacing: 2px;
 }
+
+@media (max-width: 960px) {
+  #hud {
+    padding: 12px 14px 10px;
+  }
+  .bar-wrap {
+    width: min(36vw, 150px);
+  }
+  #score-txt {
+    font-size: 9px;
+  }
+  #level-txt,
+  #wave-txt,
+  .hud-label {
+    font-size: 6px;
+  }
+  .instructions {
+    max-width: min(88vw, 520px);
+    line-height: 2.1;
+  }
+  .divider {
+    width: min(78vw, 280px);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  body.touch-device #mobile-controls {
+    display: block;
+  }
+  body.touch-device #input-area {
+    left: auto;
+    right: 18px;
+    bottom: 18px;
+    transform: none;
+    width: min(54vw, 340px);
+  }
+  body.touch-device #input-hint {
+    text-align: right;
+  }
+}
+
+@media (max-width: 700px) {
+  #hud {
+    flex-direction: column;
+    gap: 10px;
+  }
+  #hud-right {
+    align-self: stretch;
+  }
+  #score-txt,
+  #level-txt,
+  #wave-txt {
+    text-align: left;
+  }
+  .screen {
+    gap: 18px;
+    padding: 24px 16px;
+  }
+  .instructions {
+    line-height: 1.9;
+  }
+  body.touch-device #input-area {
+    right: 12px;
+    bottom: 14px;
+    width: calc(100vw - 156px);
+    min-width: 180px;
+  }
+  body.touch-device #mobile-controls {
+    left: 12px;
+    bottom: 14px;
+  }
+  #move-pad {
+    width: 112px;
+    height: 112px;
+  }
+  #move-stick {
+    width: 48px;
+    height: 48px;
+  }
+  #answer-controls,
+  #input-actions {
+    gap: 8px;
+  }
+  #answer-field {
+    font-size: 14px;
+    padding: 12px 10px;
+    letter-spacing: 3px;
+  }
+  .input-btn {
+    min-width: 74px;
+    font-size: 9px;
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-title,
+  .go-title {
+    letter-spacing: 3px;
+  }
+  .title-sub,
+  .go-sub {
+    letter-spacing: 1px;
+  }
+  .btn {
+    width: min(84vw, 300px);
+    padding: 14px 18px;
+  }
+  body.touch-device #input-area {
+    width: calc(100vw - 144px);
+    min-width: 168px;
+  }
+  #input-hint {
+    font-size: 5px;
+  }
+}
 </style>
 </head>
 <body>
@@ -302,7 +515,20 @@ html, body {
   <!-- Input area -->
   <div id="input-area">
     <div id="input-hint">TYPE ANSWER → ENTER / SPACE</div>
-    <div id="input-box">_</div>
+    <div id="answer-controls">
+      <input id="answer-field" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" maxlength="7" placeholder="_" aria-label="Type answer">
+      <button class="input-btn" id="fireBtn" type="button">FIRE</button>
+    </div>
+    <div id="input-actions">
+      <button class="input-btn input-btn-small" id="focusInputBtn" type="button">TYPE</button>
+      <button class="input-btn input-btn-small" id="backspaceBtn" type="button">DEL</button>
+    </div>
+  </div>
+
+  <div id="mobile-controls">
+    <div id="move-pad" aria-label="Touch movement pad" role="application">
+      <div id="move-stick"></div>
+    </div>
   </div>
 
   <!-- Start screen -->
