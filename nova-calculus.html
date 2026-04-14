@@ -60,9 +60,6 @@ html, body {
   pointer-events: none;
   z-index: 50;
 }
-body.touch-device #ui-overlay {
-  pointer-events: auto;
-}
 
 /* ===== HUD ===== */
 #hud {
@@ -514,7 +511,7 @@ body.touch-device #ui-overlay {
 
   <!-- Input area -->
   <div id="input-area">
-    <div id="input-hint">TYPE ANSWER → ENTER / SPACE</div>
+    <div id="input-hint">TYPE ANSWER - ENTER / FIRE</div>
     <div id="answer-controls">
       <input id="answer-field" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" maxlength="7" placeholder="_" aria-label="Type answer">
       <button class="input-btn" id="fireBtn" type="button">FIRE</button>
@@ -565,14 +562,47 @@ body.touch-device #ui-overlay {
 // ═══════════════════════════════════════════════
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const body = document.body;
+const hudEl = document.getElementById('hud');
+const inputAreaEl = document.getElementById('input-area');
+const inputHintEl = document.getElementById('input-hint');
+const answerFieldEl = document.getElementById('answer-field');
+const fireBtnEl = document.getElementById('fireBtn');
+const focusInputBtnEl = document.getElementById('focusInputBtn');
+const backspaceBtnEl = document.getElementById('backspaceBtn');
+const mobileControlsEl = document.getElementById('mobile-controls');
+const movePadEl = document.getElementById('move-pad');
+const moveStickEl = document.getElementById('move-stick');
+const startBtnEl = document.getElementById('startBtn');
+const restartBtnEl = document.getElementById('restartBtn');
+const instructionsEl = document.querySelector('.instructions');
 let W = canvas.width = window.innerWidth;
 let H = canvas.height = window.innerHeight;
+let isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+
+function applyDeviceMode() {
+  isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+  body.classList.toggle('touch-device', isTouchDevice);
+  inputHintEl.textContent = isTouchDevice ? 'TAP TYPE TO OPEN KEYBOARD - ENTER / FIRE' : 'TYPE ANSWER - ENTER / SPACE';
+  instructionsEl.innerHTML = [
+    '<span>WASD</span>, <span>ARROWS</span>, OR THE <span>TOUCH PAD</span> - PILOT YOUR SHIP',
+    '<span>TYPE</span> THE ANSWER TO AN EQUATION',
+    'PRESS <span>ENTER</span>, <span>SPACE</span>, OR <span>FIRE</span> TO SHOOT',
+    'DESTROY ALL ALIEN SHIPS BEFORE',
+    'THEY BREACH YOUR HULL!<br><br>',
+    'ON PHONES / TABLETS, TAP <span>TYPE</span> IF YOU NEED THE KEYBOARD AGAIN<br><br>',
+    'BOSSES APPEAR IN GOLD - TAKE 4 HITS',
+  ].join('<br>');
+}
 
 window.addEventListener('resize', () => {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
+  applyDeviceMode();
   generateNebula();
 });
+applyDeviceMode();
+mobileControlsEl.style.display = 'none';
 
 // ═══════════════════════════════════════════════
 //  GAME STATE
@@ -1167,6 +1197,8 @@ class Player {
     if (keys['ArrowRight'] || keys['d'] || keys['D']) dx += 1;
     if (keys['ArrowUp']    || keys['w'] || keys['W']) dy -= 1;
     if (keys['ArrowDown']  || keys['s'] || keys['S']) dy += 1;
+    dx += touchMove.x;
+    dy += touchMove.y;
 
     const moving = dx !== 0 || dy !== 0;
     if (moving) {
@@ -1303,48 +1335,171 @@ class Player {
 const keys = {};
 let typedInput = '';
 let wrongFlash = 0;
-const gameplayKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter', 'Backspace']);
+const movementKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'w', 'W', 'a', 'A', 's', 'S', 'd', 'D']);
+const gameplayKeys = new Set([...movementKeys, ' ', 'Enter', 'Backspace']);
+const touchMove = { x: 0, y: 0, active: false, pointerId: null };
 
 function clearKeys() {
   for (const key in keys) keys[key] = false;
 }
 
+function sanitizeAnswerValue(value) {
+  let clean = String(value ?? '').replace(/[^\d-]/g, '');
+  if (clean.includes('-')) {
+    clean = `${clean.startsWith('-') ? '-' : ''}${clean.replace(/-/g, '')}`;
+  }
+  const sign = clean.startsWith('-') ? '-' : '';
+  const digits = clean.slice(sign ? 1 : 0).replace(/\D/g, '').slice(0, 6);
+  return `${sign}${digits}`.slice(0, 7);
+}
+
+function focusAnswerInput() {
+  try {
+    answerFieldEl.focus({ preventScroll: true });
+  } catch (e) {
+    answerFieldEl.focus();
+  }
+}
+
+function syncAnswerField() {
+  if (answerFieldEl.value !== typedInput) {
+    answerFieldEl.value = typedInput;
+  }
+}
+
+function refreshInput() {
+  syncAnswerField();
+  answerFieldEl.classList.toggle('wrong', wrongFlash > 0);
+}
+
+function resetTouchMove() {
+  touchMove.x = 0;
+  touchMove.y = 0;
+  touchMove.active = false;
+  touchMove.pointerId = null;
+  moveStickEl.style.transform = 'translate(-50%, -50%)';
+}
+
+function updateTouchMove(clientX, clientY) {
+  const rect = movePadEl.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const maxRadius = rect.width * 0.34;
+  let dx = clientX - centerX;
+  let dy = clientY - centerY;
+  const dist = Math.hypot(dx, dy);
+
+  if (dist > maxRadius && dist > 0) {
+    const scale = maxRadius / dist;
+    dx *= scale;
+    dy *= scale;
+  }
+
+  touchMove.x = dx / maxRadius;
+  touchMove.y = dy / maxRadius;
+  touchMove.active = true;
+  moveStickEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+}
+
 window.addEventListener('keydown', e => {
-  if (gameState === 'PLAYING' && gameplayKeys.has(e.key)) {
+  const targetIsAnswer = e.target === answerFieldEl;
+
+  if (gameState === 'PLAYING' && (gameplayKeys.has(e.key) || (targetIsAnswer && (e.key === ' ' || movementKeys.has(e.key))))) {
     e.preventDefault();
   }
   keys[e.key] = true;
   if (gameState !== 'PLAYING') return;
 
+  if (targetIsAnswer) {
+    if ((e.key === 'Enter' || e.key === ' ') && typedInput.length > 0) {
+      submitAnswer();
+    }
+    return;
+  }
+
   if (e.key === 'Backspace') {
     typedInput = typedInput.slice(0, -1);
-    refreshInput(); return;
-  }
-  if ((e.key === 'Enter' || e.key === ' ') && typedInput.length > 0) {
-    e.preventDefault(); submitAnswer(); return;
+    refreshInput();
+    return;
   }
   if (e.key === '-' && typedInput.length === 0) {
-    typedInput = '-'; refreshInput(); return;
+    typedInput = '-';
+    refreshInput();
+    return;
   }
   if (e.key >= '0' && e.key <= '9' && typedInput.length < 7) {
-    typedInput += e.key; refreshInput();
+    typedInput += e.key;
+    refreshInput();
+    return;
+  }
+  if ((e.key === 'Enter' || e.key === ' ') && typedInput.length > 0) {
+    submitAnswer();
   }
 }, { passive: false });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
-window.addEventListener('blur', clearKeys);
+window.addEventListener('blur', () => {
+  clearKeys();
+  resetTouchMove();
+});
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) clearKeys();
+  if (document.hidden) {
+    clearKeys();
+    resetTouchMove();
+  }
 });
 
-function refreshInput() {
-  const box = document.getElementById('input-box');
-  box.textContent = typedInput || '_';
-  box.className = wrongFlash > 0 ? 'wrong' : '';
-}
+answerFieldEl.addEventListener('input', () => {
+  typedInput = sanitizeAnswerValue(answerFieldEl.value);
+  refreshInput();
+});
+
+answerFieldEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+  }
+});
+
+fireBtnEl.addEventListener('click', () => {
+  if (gameState !== 'PLAYING' || typedInput.length === 0) return;
+  submitAnswer();
+});
+
+focusInputBtnEl.addEventListener('click', () => {
+  if (gameState !== 'PLAYING') return;
+  focusAnswerInput();
+});
+
+backspaceBtnEl.addEventListener('click', () => {
+  if (gameState !== 'PLAYING') return;
+  typedInput = typedInput.slice(0, -1);
+  refreshInput();
+  focusAnswerInput();
+});
+
+movePadEl.addEventListener('pointerdown', e => {
+  if (gameState !== 'PLAYING') return;
+  touchMove.pointerId = e.pointerId;
+  movePadEl.setPointerCapture(e.pointerId);
+  updateTouchMove(e.clientX, e.clientY);
+});
+
+movePadEl.addEventListener('pointermove', e => {
+  if (touchMove.pointerId !== e.pointerId) return;
+  updateTouchMove(e.clientX, e.clientY);
+});
+
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => {
+  movePadEl.addEventListener(type, e => {
+    if (touchMove.pointerId !== null && type !== 'lostpointercapture' && touchMove.pointerId !== e.pointerId) return;
+    resetTouchMove();
+  });
+});
 
 function submitAnswer() {
   const ans = typedInput.trim();
-  typedInput = ''; refreshInput();
+  if (!ans) return;
+  typedInput = '';
+  refreshInput();
   const matches = enemies.filter(e => !e.dead && e.ans === ans);
   if (matches.length > 0) {
     for (const e of matches) projectiles.push(new Projectile(player.x, player.y, e));
@@ -1357,6 +1512,9 @@ function submitAnswer() {
     shakeAmt = Math.max(shakeAmt, 3);
     refreshInput();
     setTimeout(() => { wrongFlash = 0; refreshInput(); }, 500);
+  }
+  if (gameState === 'PLAYING') {
+    focusAnswerInput();
   }
 }
 
@@ -1495,6 +1653,8 @@ function loop(ts) {
 // ═══════════════════════════════════════════════
 function startGame() {
   initAudio();
+  clearKeys();
+  resetTouchMove();
 
   // Clear everything
   score = 0; gameTime = 0; killed = 0; shakeAmt = 0;
@@ -1509,10 +1669,13 @@ function startGame() {
   // UI
   document.getElementById('start-screen').style.display   = 'none';
   document.getElementById('gameover-screen').style.display = 'none';
-  document.getElementById('hud').style.display             = 'flex';
-  document.getElementById('input-area').style.display      = 'flex';
+  hudEl.style.display            = 'flex';
+  inputAreaEl.style.display      = 'flex';
+  mobileControlsEl.style.display = isTouchDevice ? 'block' : 'none';
 
-  refreshInput(); updateHUD();
+  refreshInput();
+  updateHUD();
+  focusAnswerInput();
 
   gameState = 'PLAYING';
   lastTime = performance.now();
@@ -1523,8 +1686,12 @@ function triggerGameOver() {
   if (gameState !== 'PLAYING') return;
   gameState = 'GAMEOVER';
   cancelAnimationFrame(animId);
-  document.getElementById('hud').style.display             = 'none';
-  document.getElementById('input-area').style.display      = 'none';
+  clearKeys();
+  resetTouchMove();
+  hudEl.style.display             = 'none';
+  inputAreaEl.style.display       = 'none';
+  mobileControlsEl.style.display  = 'none';
+  answerFieldEl.blur();
   document.getElementById('go-score').textContent          = `SCORE: ${score}`;
   document.getElementById('go-stats').textContent          =
     `LEVEL ${player.level}  ·  KILLS: ${killed}  ·  ${Math.floor(gameTime/1000)}s`;
@@ -1534,8 +1701,13 @@ function triggerGameOver() {
 // ═══════════════════════════════════════════════
 //  BUTTON EVENTS
 // ═══════════════════════════════════════════════
-document.getElementById('startBtn').addEventListener('click', startGame);
-document.getElementById('restartBtn').addEventListener('click', startGame);
+startBtnEl.addEventListener('click', startGame);
+restartBtnEl.addEventListener('click', startGame);
+canvas.addEventListener('pointerdown', () => {
+  if (gameState === 'PLAYING') {
+    focusAnswerInput();
+  }
+});
 
 // ═══════════════════════════════════════════════
 //  INITIAL START-SCREEN BACKGROUND DRAW
