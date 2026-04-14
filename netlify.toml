@@ -1,7 +1,0 @@
-[build]
-  publish = "."
-
-[[redirects]]
-  from = "/"
-  to = "/nova-calculus.html"
-  status = 200

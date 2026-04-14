@@ -29,10 +29,6 @@ html, body {
   background: var(--bg);
   font-family: 'Press Start 2P', monospace;
   color: var(--white);
-  overscroll-behavior: none;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
 }
 #gameCanvas {
   display: block;
@@ -321,7 +317,6 @@ html, body {
   box-shadow: 0 0 14px var(--cyan-dim);
   position: relative;
   overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
 }
 .btn::before {
   content: '';
@@ -621,12 +616,8 @@ let shakeAmt = 0;
 let audioCtx = null;
 
 function initAudio() {
-  if (!audioCtx) {
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
-  }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
+  if (audioCtx) return;
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
 }
 
 function playTone(type, f0, f1, dur, vol, delay = 0) {
@@ -932,7 +923,7 @@ class Enemy {
     this.id    = eidCtr++;
     this.x     = x; this.y = y;
     this.isBoss = (Math.random() < 0.1 && level >= 2);
-    this.r     = this.isBoss ? 36 : (18 + Math.random() * 10);
+    this.r     = this.isBoss ? 40 : (22 + Math.random() * 12);
     this.hp    = this.isBoss ? 4 : 1;
     this.maxHp = this.hp;
     this.spd   = (0.8 + Math.random() * 0.6) * (this.isBoss ? 0.65 : 1);
@@ -1015,6 +1006,7 @@ class Enemy {
   draw() {
     const flash = this.hitFlash > 0;
     const col = flash ? '#ffffff' : this.col;
+    const fillCol = flash ? 'rgba(255,255,255,0.92)' : `${col}44`;
 
     // Floating bob
     const floatY = Math.sin(this.floatOff) * 3;
@@ -1023,7 +1015,7 @@ class Enemy {
     ctx.translate(this.x, this.y + floatY);
     ctx.rotate(this.angle);
 
-    ctx.shadowBlur = this.isBoss ? 30 : 20;
+    ctx.shadowBlur = this.isBoss ? 34 : 24;
     ctx.shadowColor = col;
 
     // Outer ring for bosses
@@ -1043,17 +1035,19 @@ class Enemy {
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.closePath();
-    ctx.fillStyle = 'rgba(5,5,18,0.82)';
+    ctx.fillStyle = 'rgba(20,18,50,0.96)';
+    ctx.fill();
+    ctx.fillStyle = fillCol;
     ctx.fill();
     ctx.strokeStyle = col;
-    ctx.lineWidth = this.isBoss ? 3 : 2.2;
+    ctx.lineWidth = this.isBoss ? 3.4 : 2.6;
     ctx.stroke();
 
     // Inner core glow
     ctx.beginPath();
-    ctx.arc(0, 0, this.r * 0.32, 0, Math.PI * 2);
+    ctx.arc(0, 0, this.r * 0.42, 0, Math.PI * 2);
     ctx.fillStyle = col;
-    ctx.globalAlpha = flash ? 1 : 0.55;
+    ctx.globalAlpha = flash ? 1 : 0.78;
     ctx.fill();
     ctx.globalAlpha = 1;
 
@@ -1077,7 +1071,7 @@ class Enemy {
   drawLabel(floatY) {
     const ly = this.y + floatY - this.r - 16;
     const text = `${this.eq}=?`;
-    ctx.font = `7px "Press Start 2P"`;
+    ctx.font = `8px "Press Start 2P"`;
     const tw = ctx.measureText(text).width;
     const px = 7, py = 5;
 
@@ -1175,7 +1169,7 @@ let player;
 class Player {
   constructor() {
     this.x = W / 2; this.y = H / 2;
-    this.r = 17;
+    this.r = 20;
     this.spd = 2.9;
     this.hp = 10; this.maxHp = 10;
     this.level = 1;
@@ -1281,10 +1275,19 @@ class Player {
     ctx.lineTo(0,              this.r * 0.28);
     ctx.lineTo(-this.r * 0.65, this.r * 0.72);
     ctx.closePath();
-    ctx.fillStyle = '#060618';
+    ctx.fillStyle = 'rgba(18,22,56,0.96)';
     ctx.fill();
     ctx.strokeStyle = '#00f5ff';
-    ctx.lineWidth = 2.2; ctx.stroke();
+    ctx.lineWidth = 2.5; ctx.stroke();
+
+    // Inner hull fill for better contrast on small screens
+    ctx.beginPath();
+    ctx.moveTo(0, -this.r * 0.72);
+    ctx.lineTo(this.r * 0.34, this.r * 0.36);
+    ctx.lineTo(-this.r * 0.34, this.r * 0.36);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,245,255,0.18)';
+    ctx.fill();
 
     // Engine glow dot
     ctx.beginPath();
@@ -1323,8 +1326,8 @@ class Player {
     ctx.translate(this.x, this.y);
     ctx.beginPath();
     ctx.arc(0, 0, this.r + 8, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(0,245,255,${0.15 + 0.08 * Math.sin(this.auraAngle)})`;
-    ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = `rgba(0,245,255,${0.26 + 0.12 * Math.sin(this.auraAngle)})`;
+    ctx.lineWidth = 1.8; ctx.stroke();
     ctx.restore();
   }
 }
@@ -1354,6 +1357,7 @@ function sanitizeAnswerValue(value) {
 }
 
 function focusAnswerInput() {
+  if (isTouchDevice && gameState !== 'PLAYING') return;
   try {
     answerFieldEl.focus({ preventScroll: true });
   } catch (e) {
@@ -1513,7 +1517,7 @@ function submitAnswer() {
     refreshInput();
     setTimeout(() => { wrongFlash = 0; refreshInput(); }, 500);
   }
-  if (gameState === 'PLAYING') {
+  if (gameState === 'PLAYING' && !isTouchDevice) {
     focusAnswerInput();
   }
 }
@@ -1675,7 +1679,9 @@ function startGame() {
 
   refreshInput();
   updateHUD();
-  focusAnswerInput();
+  if (!isTouchDevice) {
+    focusAnswerInput();
+  }
 
   gameState = 'PLAYING';
   lastTime = performance.now();
