@@ -477,6 +477,40 @@ html, body {
 }
 
 @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+  #start-screen,
+  #gameover-screen {
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding:
+      calc(22px + env(safe-area-inset-top, 0px))
+      14px
+      calc(24px + env(safe-area-inset-bottom, 0px));
+    gap: 14px;
+  }
+  #start-screen .divider,
+  #gameover-screen .divider {
+    width: min(72vw, 240px);
+  }
+  #start-screen .game-title,
+  #gameover-screen .go-title {
+    font-size: clamp(20px, 8vw, 34px);
+    letter-spacing: 3px;
+    line-height: 1.15;
+  }
+  #start-screen .title-sub,
+  #gameover-screen .go-sub {
+    font-size: 7px;
+    letter-spacing: 1px;
+  }
+  #start-screen .instructions {
+    max-width: min(90vw, 330px);
+    line-height: 1.75;
+    font-size: 6px;
+  }
+  #start-screen .btn,
+  #gameover-screen .btn {
+    width: min(82vw, 280px);
+  }
   #hud {
     padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 6px;
     gap: 5px;
@@ -498,9 +532,11 @@ html, body {
     font-size: 7px;
   }
   body.touch-device #input-area {
+    left: auto;
+    right: calc(8px + env(safe-area-inset-right, 0px));
     top: calc(44px + env(safe-area-inset-top, 0px));
-    width: 120px;
-    margin-left: -60px;
+    width: 108px;
+    margin-left: 0;
   }
   #answer-field {
     font-size: 14px;
@@ -630,9 +666,10 @@ html, body {
     padding: 14px 18px;
   }
   body.touch-device #input-area {
+    right: 8px;
     top: 48px;
-    width: 144px;
-    margin-left: -72px;
+    width: 104px;
+    margin-left: 0;
   }
   body.touch-device #mobile-keypad {
     width: 132px;
@@ -650,6 +687,25 @@ html, body {
   #move-stick {
     width: 34px;
     height: 34px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) and (max-width: 700px) {
+  body.touch-device #input-area {
+    left: auto;
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    top: calc(44px + env(safe-area-inset-top, 0px));
+    width: 108px;
+    margin-left: 0;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) and (max-width: 480px) {
+  body.touch-device #input-area {
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    top: calc(44px + env(safe-area-inset-top, 0px));
+    width: 96px;
+    margin-left: 0;
   }
 }
 </style>
