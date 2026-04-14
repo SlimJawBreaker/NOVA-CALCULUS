@@ -487,39 +487,114 @@ html, body {
 }
 
 @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
-  #hud {
-    justify-content: center;
-    gap: min(16vw, 120px);
+  #start-screen,
+  #gameover-screen {
+    justify-content: flex-start;
+    overflow-y: auto;
     padding:
-      calc(10px + env(safe-area-inset-top, 0px))
-      max(24px, env(safe-area-inset-right, 0px))
+      calc(14px + env(safe-area-inset-top, 0px))
+      16px
+      calc(18px + env(safe-area-inset-bottom, 0px));
+    gap: 12px;
+  }
+  #start-screen .game-title,
+  #gameover-screen .go-title {
+    font-size: clamp(18px, 5vw, 30px);
+    letter-spacing: 3px;
+    line-height: 1.08;
+  }
+  #start-screen .title-sub,
+  #gameover-screen .go-sub,
+  #go-score,
+  #go-stats {
+    letter-spacing: 1px;
+  }
+  #start-screen .instructions {
+    max-width: min(88vw, 560px);
+    line-height: 1.7;
+    font-size: 6px;
+  }
+  #start-screen .btn,
+  #gameover-screen .btn {
+    width: min(76vw, 260px);
+    padding: 12px 18px;
+  }
+  #hud {
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    padding:
+      calc(8px + env(safe-area-inset-top, 0px))
+      max(16px, env(safe-area-inset-right, 0px))
       8px
-      max(24px, env(safe-area-inset-left, 0px));
+      max(16px, env(safe-area-inset-left, 0px));
+    flex-direction: row;
+  }
+  #hud-left,
+  #hud-right {
+    gap: 3px;
   }
   #hud-right {
-    align-items: flex-start;
+    align-items: flex-end;
+    align-self: auto;
   }
   #score-txt,
   #level-txt,
   #wave-txt {
-    text-align: left;
+    text-align: right;
+  }
+  .bar-wrap {
+    width: min(26vw, 126px);
+    height: 6px;
+  }
+  .hud-label,
+  #wave-txt {
+    font-size: 5px;
+  }
+  #score-txt,
+  #level-txt {
+    font-size: 7px;
   }
   body.touch-device #input-area {
     left: 50%;
     right: auto;
-    top: calc(12px + env(safe-area-inset-top, 0px));
+    top: calc(48px + env(safe-area-inset-top, 0px));
     bottom: auto;
-    width: min(36vw, 240px);
-    margin-left: -120px;
+    width: 128px;
+    margin-left: -64px;
     transform: none;
   }
+  #answer-field {
+    font-size: 14px;
+    min-height: 34px;
+    padding: 8px 6px;
+    letter-spacing: 1px;
+  }
   body.touch-device #mobile-controls {
-    left: calc(12px + env(safe-area-inset-left, 0px));
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    left: calc(8px + env(safe-area-inset-left, 0px));
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   }
   body.touch-device #mobile-keypad {
-    right: calc(12px + env(safe-area-inset-right, 0px));
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    right: calc(8px + env(safe-area-inset-right, 0px));
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: 126px;
+    padding: 5px;
+  }
+  #mobile-keypad-grid {
+    gap: 5px;
+  }
+  .keypad-btn {
+    min-height: 25px;
+    font-size: 7px;
+    border-width: 1px;
+  }
+  #move-pad {
+    width: 76px;
+    height: 76px;
+  }
+  #move-stick {
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -737,6 +812,63 @@ html, body {
   #move-stick {
     width: 34px;
     height: 34px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 700px) {
+  #hud {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    padding:
+      calc(8px + env(safe-area-inset-top, 0px))
+      max(10px, env(safe-area-inset-right, 0px))
+      6px
+      max(10px, env(safe-area-inset-left, 0px));
+  }
+  #hud-right {
+    align-self: auto;
+    align-items: flex-end;
+  }
+  #score-txt,
+  #level-txt,
+  #wave-txt {
+    text-align: right;
+  }
+  .bar-wrap {
+    width: min(24vw, 104px);
+    height: 6px;
+  }
+  body.touch-device #input-area {
+    top: calc(46px + env(safe-area-inset-top, 0px));
+    width: 118px;
+    margin-left: -59px;
+  }
+  body.touch-device #mobile-keypad {
+    width: 118px;
+  }
+  #move-pad {
+    width: 72px;
+    height: 72px;
+  }
+  #move-stick {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-width: 480px) {
+  #start-screen .instructions {
+    max-width: min(90vw, 340px);
+  }
+  body.touch-device #input-area {
+    top: calc(44px + env(safe-area-inset-top, 0px));
+    width: 112px;
+    margin-left: -56px;
+  }
+  body.touch-device #mobile-keypad {
+    width: 112px;
   }
 }
 
