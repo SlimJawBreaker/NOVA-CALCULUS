@@ -29,6 +29,10 @@ html, body {
   background: var(--bg);
   font-family: 'Press Start 2P', monospace;
   color: var(--white);
+  overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 #gameCanvas {
   display: block;
@@ -223,6 +227,7 @@ html, body {
   box-shadow: 0 0 14px var(--cyan-dim);
   position: relative;
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 .btn::before {
   content: '';
@@ -360,8 +365,12 @@ let shakeAmt = 0;
 let audioCtx = null;
 
 function initAudio() {
-  if (audioCtx) return;
-  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
 }
 
 function playTone(type, f0, f1, dur, vol, delay = 0) {
@@ -1068,8 +1077,16 @@ class Player {
 const keys = {};
 let typedInput = '';
 let wrongFlash = 0;
+const gameplayKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter', 'Backspace']);
+
+function clearKeys() {
+  for (const key in keys) keys[key] = false;
+}
 
 window.addEventListener('keydown', e => {
+  if (gameState === 'PLAYING' && gameplayKeys.has(e.key)) {
+    e.preventDefault();
+  }
   keys[e.key] = true;
   if (gameState !== 'PLAYING') return;
 
@@ -1086,8 +1103,12 @@ window.addEventListener('keydown', e => {
   if (e.key >= '0' && e.key <= '9' && typedInput.length < 7) {
     typedInput += e.key; refreshInput();
   }
-});
+}, { passive: false });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
+window.addEventListener('blur', clearKeys);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) clearKeys();
+});
 
 function refreshInput() {
   const box = document.getElementById('input-box');
