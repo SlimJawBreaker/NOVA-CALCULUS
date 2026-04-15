@@ -31,6 +31,9 @@ html, body {
   color: var(--white);
   -webkit-text-size-adjust: 100%;
   overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 #gameCanvas {
   display: block;
@@ -57,6 +60,9 @@ html, body {
   top: 0; left: 0; right: 0; bottom: 0;
   pointer-events: none;
   z-index: 50;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* ===== HUD ===== */
@@ -166,6 +172,7 @@ html, body {
   caret-color: var(--cyan);
   -webkit-appearance: none;
   appearance: none;
+  -webkit-touch-callout: none;
 }
 #answer-field::placeholder {
   color: rgba(208,216,255,0.35);
@@ -397,6 +404,30 @@ html, body {
 }
 .btn-pink::before { background: var(--pink-dim); }
 .btn-pink:hover { box-shadow: 0 0 35px var(--pink), 0 0 70px var(--pink-dim); }
+
+#hud,
+#input-area,
+#mobile-keypad,
+#mobile-controls,
+.screen,
+.hud-label,
+#score-txt,
+#level-txt,
+#wave-txt,
+#input-hint,
+.instructions,
+.game-title,
+.title-sub,
+.go-title,
+.go-stat,
+.go-sub,
+.btn,
+.input-btn,
+.keypad-btn {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
 
 #gameover-screen {
   display: none;
@@ -991,6 +1022,7 @@ html, body {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const body = document.body;
+const uiOverlayEl = document.getElementById('ui-overlay');
 const hudEl = document.getElementById('hud');
 const inputAreaEl = document.getElementById('input-area');
 const inputHintEl = document.getElementById('input-hint');
@@ -1834,6 +1866,28 @@ function refreshInput() {
   answerFieldEl.classList.toggle('wrong', wrongFlash > 0);
 }
 
+function blockClipboardEvent(e) {
+  e.preventDefault();
+}
+
+function handleVirtualKeyPress(button) {
+  if (gameState !== 'PLAYING') return;
+  const action = button.dataset.action;
+  const key = button.dataset.key;
+
+  if (action === 'delete') {
+    deleteAnswerChar();
+    return;
+  }
+  if (action === 'fire') {
+    submitAnswer();
+    return;
+  }
+  if (key) {
+    appendAnswerChar(key);
+  }
+}
+
 function appendAnswerChar(char) {
   if (char === '-') {
     if (typedInput.length === 0) {
@@ -1937,6 +1991,13 @@ answerFieldEl.addEventListener('keydown', e => {
   }
 });
 
+['copy', 'cut', 'paste'].forEach(type => {
+  answerFieldEl.addEventListener(type, blockClipboardEvent);
+  uiOverlayEl.addEventListener(type, blockClipboardEvent);
+});
+
+uiOverlayEl.addEventListener('contextmenu', blockClipboardEvent);
+
 fireBtnEl.addEventListener('click', () => {
   if (gameState !== 'PLAYING' || typedInput.length === 0) return;
   submitAnswer();
@@ -1957,27 +2018,22 @@ backspaceBtnEl.addEventListener('click', () => {
 });
 
 for (const button of keypadButtons) {
-  button.addEventListener('click', () => {
-    if (gameState !== 'PLAYING') return;
-    const action = button.dataset.action;
-    const key = button.dataset.key;
+  button.addEventListener('pointerdown', e => {
+    if (!isTouchDevice) return;
+    e.preventDefault();
+    e.stopPropagation();
+    handleVirtualKeyPress(button);
+  });
 
-    if (action === 'delete') {
-      deleteAnswerChar();
-      return;
-    }
-    if (action === 'fire') {
-      submitAnswer();
-      return;
-    }
-    if (key) {
-      appendAnswerChar(key);
-    }
+  button.addEventListener('click', () => {
+    if (isTouchDevice) return;
+    handleVirtualKeyPress(button);
   });
 }
 
 movePadEl.addEventListener('pointerdown', e => {
   if (gameState !== 'PLAYING') return;
+  e.preventDefault();
   touchMove.pointerId = e.pointerId;
   movePadEl.setPointerCapture(e.pointerId);
   updateTouchMove(e.clientX, e.clientY);
@@ -1985,6 +2041,7 @@ movePadEl.addEventListener('pointerdown', e => {
 
 movePadEl.addEventListener('pointermove', e => {
   if (touchMove.pointerId !== e.pointerId) return;
+  e.preventDefault();
   updateTouchMove(e.clientX, e.clientY);
 });
 
