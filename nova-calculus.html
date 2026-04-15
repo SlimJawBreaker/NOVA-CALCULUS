@@ -489,35 +489,41 @@ html, body {
 @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
   #start-screen,
   #gameover-screen {
-    justify-content: flex-start;
-    overflow-y: auto;
+    justify-content: center;
+    overflow: hidden;
     padding:
-      calc(14px + env(safe-area-inset-top, 0px))
+      calc(8px + env(safe-area-inset-top, 0px))
       16px
-      calc(18px + env(safe-area-inset-bottom, 0px));
-    gap: 12px;
+      calc(10px + env(safe-area-inset-bottom, 0px));
+    gap: 8px;
   }
   #start-screen .game-title,
   #gameover-screen .go-title {
-    font-size: clamp(18px, 5vw, 30px);
-    letter-spacing: 3px;
-    line-height: 1.08;
+    font-size: clamp(16px, 4.2vw, 26px);
+    letter-spacing: 2px;
+    line-height: 1.02;
   }
   #start-screen .title-sub,
   #gameover-screen .go-sub,
   #go-score,
   #go-stats {
+    font-size: 6px;
     letter-spacing: 1px;
   }
+  #start-screen .divider,
+  #gameover-screen .divider {
+    width: min(50vw, 180px);
+  }
   #start-screen .instructions {
-    max-width: min(88vw, 560px);
-    line-height: 1.7;
-    font-size: 6px;
+    max-width: min(86vw, 500px);
+    line-height: 1.45;
+    font-size: 5px;
   }
   #start-screen .btn,
   #gameover-screen .btn {
-    width: min(76vw, 260px);
-    padding: 12px 18px;
+    width: min(64vw, 220px);
+    padding: 10px 14px;
+    font-size: 9px;
   }
   #hud {
     justify-content: space-between;
@@ -1006,7 +1012,12 @@ let isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.
 
 function getTouchViewScale() {
   if (!isTouchDevice) return 1;
-  return H > W ? 0.8 : 0.88;
+  return H > W ? 0.68 : 0.76;
+}
+
+function getTouchLabelScale() {
+  if (!isTouchDevice) return 1;
+  return H > W ? 0.78 : 0.84;
 }
 
 function applyDeviceMode() {
@@ -1512,26 +1523,29 @@ class Enemy {
   }
 
   drawLabel(floatY) {
+    const labelScale = getTouchLabelScale();
     const ly = this.y + floatY - this.r - 16;
     const text = `${this.eq}=?`;
-    ctx.font = `8px "Press Start 2P"`;
+    const fontSize = Math.max(6, Math.round(8 * labelScale));
+    ctx.font = `${fontSize}px "Press Start 2P"`;
     const tw = ctx.measureText(text).width;
-    const px = 7, py = 5;
+    const px = Math.max(5, Math.round(7 * labelScale));
+    const py = Math.max(4, Math.round(5 * labelScale));
 
     ctx.fillStyle = 'rgba(4,4,18,0.78)';
     ctx.strokeStyle = this.isBoss ? '#ffd700' : this.col;
     ctx.lineWidth = 1;
     const rx = this.x - tw/2 - px;
-    const ry = ly - 11;
+    const rh = Math.max(13, Math.round(16 * labelScale));
+    const ry = ly - Math.round(rh * 0.7);
     const rw = tw + px*2;
-    const rh = 16;
     roundRect(ctx, rx, ry, rw, rh, 3);
     ctx.fill(); ctx.stroke();
 
     ctx.fillStyle = '#e0e8ff';
     ctx.shadowBlur = 0;
     ctx.textAlign = 'center';
-    ctx.fillText(text, this.x, ly);
+    ctx.fillText(text, this.x, ry + rh - py);
   }
 }
 
@@ -2040,7 +2054,7 @@ function getSpawnPressure() {
 
 function spawnEnemy() {
   const side = Math.floor(Math.random() * 4);
-  const pad = isTouchDevice ? (H > W ? 92 : 78) : 60;
+  const pad = isTouchDevice ? (H > W ? 110 : 92) : 60;
   let x, y;
   if (side === 0)      { x = Math.random() * W;   y = -pad; }
   else if (side === 1) { x = W + pad;              y = Math.random() * H; }
