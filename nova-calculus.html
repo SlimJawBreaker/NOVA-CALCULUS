@@ -454,6 +454,66 @@ html, body {
   text-shadow: 0 0 8px var(--purple);
   letter-spacing: 2px;
 }
+#player-name {
+  width: min(80vw, 320px);
+  padding: 12px 14px;
+  border: 2px solid var(--cyan);
+  border-radius: 4px;
+  background: rgba(5,5,20,0.88);
+  color: var(--cyan);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  box-shadow: 0 0 18px var(--cyan-dim), inset 0 0 10px rgba(0,245,255,0.05);
+}
+#player-name::placeholder {
+  color: rgba(208,216,255,0.35);
+}
+#leaderboard-list {
+  width: min(84vw, 420px);
+  min-height: 120px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0,245,255,0.22);
+  border-radius: 8px;
+  background: rgba(5,5,20,0.78);
+  box-shadow: inset 0 0 18px rgba(0,245,255,0.04);
+  font-size: clamp(6px, 1vw, 8px);
+  line-height: 1.9;
+  color: var(--white);
+  text-align: left;
+}
+.leaderboard-title {
+  margin-bottom: 8px;
+  color: var(--cyan);
+  text-shadow: 0 0 8px var(--cyan);
+  letter-spacing: 2px;
+  text-align: center;
+}
+.leaderboard-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.leaderboard-row:last-child {
+  border-bottom: 0;
+}
+.leaderboard-rank,
+.leaderboard-score {
+  color: var(--gold);
+  text-shadow: 0 0 8px rgba(255,215,0,0.35);
+}
+.leaderboard-empty,
+.leaderboard-error {
+  color: rgba(208,216,255,0.72);
+  text-align: center;
+}
+.leaderboard-error {
+  color: #ff9bbd;
+}
 
 @media (max-width: 960px) {
   #hud {
@@ -1009,6 +1069,9 @@ html, body {
     <div class="go-stat" id="go-score">SCORE: 0</div>
     <div class="go-sub" id="go-stats">LEVEL 1 | 0s SURVIVED</div>
     <div class="divider"></div>
+    <input id="player-name" type="text" maxlength="16" placeholder="ENTER NAME" autocomplete="nickname" aria-label="Player name">
+    <button class="btn" id="submitScoreBtn" type="button">SUBMIT SCORE</button>
+    <div id="leaderboard-list" aria-live="polite"></div>
     <button class="btn btn-pink" id="restartBtn">↺ TRY AGAIN</button>
   </div>
 </div>
@@ -1016,8 +1079,8 @@ html, body {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-const SUPABASE_URL = "https://supabase.com/dashboard/project/jdntazsoulmrsnzoyhun";
-const SUPABASE_ANON_KEY = "sb_publishable_SIQgmv4j7_g0vK0E8awWJQ_suPQxAl5"; // your key here
+const SUPABASE_URL = "https://jdntazsoulmrsnzoyhun.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_SIQgmv4j7_g0vK0E8awWJQ_suPQxAl5";
 
 const supabaseClient = supabase.createClient(
   SUPABASE_URL,
@@ -1047,6 +1110,9 @@ const movePadEl = document.getElementById('move-pad');
 const moveStickEl = document.getElementById('move-stick');
 const startBtnEl = document.getElementById('startBtn');
 const restartBtnEl = document.getElementById('restartBtn');
+const playerNameEl = document.getElementById('player-name');
+const submitScoreBtnEl = document.getElementById('submitScoreBtn');
+const leaderboardListEl = document.getElementById('leaderboard-list');
 const instructionsEl = document.querySelector('.instructions');
 const keypadButtons = Array.from(document.querySelectorAll('#mobile-keypad [data-key], #mobile-keypad [data-action]'));
 let W = canvas.width = window.innerWidth;
@@ -1105,6 +1171,7 @@ let lastTime = 0;
 let animId = null;
 let killed = 0;
 let shakeAmt = 0;
+let scoreSubmittedThisRun = false;
 
 // ═══════════════════════════════════════════════
 //  AUDIO
@@ -2243,6 +2310,87 @@ function loop(ts) {
 // ═══════════════════════════════════════════════
 //  SCREEN MANAGEMENT
 // ═══════════════════════════════════════════════
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[char]);
+}
+
+function setLeaderboardMessage(message, className = 'leaderboard-empty') {
+  leaderboardListEl.innerHTML = `
+    <div class="leaderboard-title">TOP PILOTS</div>
+    <div class="${className}">${escapeHtml(message)}</div>
+  `;
+}
+
+async function loadLeaderboard() {
+  setLeaderboardMessage('LOADING...');
+
+  const { data, error } = await supabaseClient
+    .from('leaderboard')
+    .select('player_name, score, level, time_survived')
+    .order('score', { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error('Leaderboard load failed:', error);
+    setLeaderboardMessage('LEADERBOARD UNAVAILABLE', 'leaderboard-error');
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    setLeaderboardMessage('NO SCORES YET - BE THE FIRST PILOT');
+    return;
+  }
+
+  leaderboardListEl.innerHTML = `
+    <div class="leaderboard-title">TOP PILOTS</div>
+    ${data.map((row, index) => `
+      <div class="leaderboard-row">
+        <span><span class="leaderboard-rank">${index + 1}.</span> ${escapeHtml(row.player_name || 'PILOT')}</span>
+        <span class="leaderboard-score">${escapeHtml(row.score)}</span>
+      </div>
+    `).join('')}
+  `;
+}
+
+async function submitScore() {
+  if (scoreSubmittedThisRun) {
+    setLeaderboardMessage('SCORE ALREADY SUBMITTED THIS RUN');
+    return;
+  }
+
+  const playerName = (playerNameEl.value.trim() || 'PILOT').slice(0, 16).toUpperCase();
+  submitScoreBtnEl.disabled = true;
+  submitScoreBtnEl.textContent = 'UPLOADING...';
+
+  const { error } = await supabaseClient
+    .from('leaderboard')
+    .insert({
+      player_name: playerName,
+      score,
+      level: player?.level || 1,
+      time_survived: Math.floor(gameTime / 1000),
+    });
+
+  if (error) {
+    console.error('Score submit failed:', error);
+    submitScoreBtnEl.disabled = false;
+    submitScoreBtnEl.textContent = 'SUBMIT SCORE';
+    setLeaderboardMessage('SUBMIT FAILED - CHECK TABLE / RLS', 'leaderboard-error');
+    return;
+  }
+
+  scoreSubmittedThisRun = true;
+  playerNameEl.value = playerName;
+  submitScoreBtnEl.textContent = 'SCORE SENT';
+  await loadLeaderboard();
+}
+
 function startGame() {
   initAudio();
   clearKeys();
@@ -2254,6 +2402,7 @@ function startGame() {
   particles.length = floatTexts.length = lightningBolts.length = 0;
   typedInput = ''; wrongFlash = 0;
   spawnTimer = 0; spawnInterval = 3000;
+  scoreSubmittedThisRun = false;
 
   player = new Player();
   generateNebula();
@@ -2265,6 +2414,8 @@ function startGame() {
   inputAreaEl.style.display      = 'flex';
   mobileControlsEl.style.display = isTouchDevice ? 'block' : 'none';
   mobileKeypadEl.style.display   = isTouchDevice ? 'block' : 'none';
+  submitScoreBtnEl.disabled      = false;
+  submitScoreBtnEl.textContent   = 'SUBMIT SCORE';
 
   refreshInput();
   updateHUD();
@@ -2288,10 +2439,16 @@ function triggerGameOver() {
   mobileControlsEl.style.display  = 'none';
   mobileKeypadEl.style.display    = 'none';
   answerFieldEl.blur();
+  if (!playerNameEl.value.trim()) {
+    playerNameEl.value = 'PILOT';
+  }
+  submitScoreBtnEl.disabled = false;
+  submitScoreBtnEl.textContent = 'SUBMIT SCORE';
   document.getElementById('go-score').textContent          = `SCORE: ${score}`;
   document.getElementById('go-stats').textContent          =
     `LEVEL ${player.level}  ·  KILLS: ${killed}  ·  ${Math.floor(gameTime/1000)}s`;
   document.getElementById('gameover-screen').style.display = 'flex';
+  loadLeaderboard();
 }
 
 // ═══════════════════════════════════════════════
@@ -2299,6 +2456,16 @@ function triggerGameOver() {
 // ═══════════════════════════════════════════════
 startBtnEl.addEventListener('click', startGame);
 restartBtnEl.addEventListener('click', startGame);
+submitScoreBtnEl.addEventListener('click', submitScore);
+playerNameEl.addEventListener('input', () => {
+  playerNameEl.value = playerNameEl.value.toUpperCase().replace(/[^A-Z0-9 _-]/g, '').slice(0, 16);
+});
+playerNameEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    submitScore();
+  }
+});
 canvas.addEventListener('pointerdown', () => {
   if (gameState === 'PLAYING' && !isTouchDevice) {
     focusAnswerInput();
@@ -2309,6 +2476,7 @@ canvas.addEventListener('pointerdown', () => {
 //  INITIAL START-SCREEN BACKGROUND DRAW
 // ═══════════════════════════════════════════════
 generateNebula();
+setLeaderboardMessage('TOP SCORES LOAD AFTER YOUR FIRST RUN');
 (function startScreenLoop(ts = 0) {
   if (gameState !== 'START') return;
   ctx.fillStyle = '#05050f';
