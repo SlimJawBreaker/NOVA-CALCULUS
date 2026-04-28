@@ -1013,6 +1013,17 @@ html, body {
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const SUPABASE_URL = "https://supabase.com/dashboard/project/jdntazsoulmrsnzoyhun";
+const SUPABASE_ANON_KEY = "sb_publishable_SIQgmv4j7_g0vK0E8awWJQ_suPQxAl5"; // your key here
+
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+</script>
 <script>
 'use strict';
 
